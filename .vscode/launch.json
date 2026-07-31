@@ -1,0 +1,24 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Launch Chrome with Extension",
+      "type": "pwa-chrome",
+      "request": "launch",
+      "url": "https://arca.live/b/furryshota",
+      "webRoot": "${workspaceFolder}",
+      "userDataDir": "${workspaceFolder}/.vscode/chrome-profile",
+      "runtimeArgs": [
+        "--disable-extensions-except=${workspaceFolder}/src",
+        "--load-extension=${workspaceFolder}/src"
+      ]
+    },
+    {
+      "name": "Attach to Chrome (9222)",
+      "type": "pwa-chrome",
+      "request": "attach",
+      "port": 9222,
+      "webRoot": "${workspaceFolder}"
+    }
+  ]
+}

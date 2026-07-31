@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "sites": [
+    {
+      "id": "arca.live",
+      "hosts": [
+        "arca.live"
+      ],
+      "parser": {
+        "engine": "arca_article",
+        "containerSelector": ".fr-view.article-content",
+        "title": {
+          "selector": ".article-head .title-row > .title",
+          "removeSelectors": [
+            ".badge",
+            "span.title[class*=\"ion-\"]"
+          ],
+          "fallbackSplit": " - ",
+          "fallback": "Arca"
+        },
+        "emoticonSelectors": [
+          ".arca-emoticon",
+          ".emoticon"
+        ],
+        "image": {
+          "linkSelector": "a[href*=\"ac-o.namu.la\"]",
+          "hrefIncludes": "type=orig",
+          "previewSelector": "img"
+        },
+        "gif": {
+          "selector": "video[data-orig=\"gif\"]",
+          "linkSelector": "a",
+          "posterAttribute": "poster",
+          "originalAttribute": "data-originalurl",
+          "allowedUrlPattern": "^https?://ac-(?:p\\d+|o)\\.namu\\.la/"
+        },
+        "video": {
+          "selector": ".fr-video video",
+          "posterAttribute": "poster",
+          "srcAttribute": "src",
+          "skipDataOrigValue": "gif"
+        },
+        "list": {
+          "pathPattern": "^(?:/b/[^/]+/?|/u/scrap_list/?$)",
+          "rowSelector": ".list-table a.vrow.column[href*=\"/b/\"]",
+          "mountSelector": "span.vcol.col-id",
+          "previewSelector": ".vrow-preview img"
+        },
+        "urlTransforms": {
+          "absolute": [
+            {
+              "pattern": "^//",
+              "replacement": "https://"
+            }
+          ],
+          "originalMedia": [
+            {
+              "pattern": "^//",
+              "replacement": "https://"
+            },
+            {
+              "pattern": "ac-p\\d+\\.namu\\.la",
+              "replacement": "ac-o.namu.la"
+            }
+          ]
+        }
+      },
+      "download": {
+        "parallelism": 2,
+        "prefixOrderInFolder": true
+      },
+      "ui": {
+        "mode": "panel",
+        "launcher": {
+          "label": "DL",
+          "tooltip": "Select article media",
+          "position": "top-right"
+        },
+        "listPlacement": {
+          "engine": "arca_list_cell"
+        },
+        "listButtonLabel": "Download",
+        "listButtonTooltip": "Download article media",
+        "buttonStyle": {
+          "borderColor": "#5865f2",
+          "iconColor": "#5865f2",
+          "backgroundColor": "rgba(88,101,242,.08)",
+          "hoverBackgroundColor": "rgba(88,101,242,.14)",
+          "badgeColor": "#5865f2"
+        }
+      }
+    },
+    {
+      "id": "x.com",
+      "hosts": [
+        "x.com",
+        "twitter.com"
+      ],
+      "parser": {
+        "engine": "tweet_media",
+        "tweetSelector": "article[data-testid=\"tweet\"]",
+        "mediaLinkSelector": "a[href*=\"/status/\"][href*=\"/photo/\"]",
+        "mediaImageSelector": "img[src*=\"pbs.twimg.com/media/\"]",
+        "statusLinkSelector": "a[href*=\"/status/\"]",
+        "statusPathPattern": "^/([^/]+)/status/(\\d+)(?:/(?:photo|video)/(\\d+))?/?$",
+        "groupTemplate": "$1/$2",
+        "folderTemplate": "$1",
+        "sourceIndexTemplate": "$3",
+        "videoSelector": "video[poster*=\"video_thumb/\"]",
+        "videoSourceSelector": "source",
+        "videoPosterPattern": "(?:(?:amplify_|ext_tw_)?video_thumb|tweet_video_thumb)/([^/?#.]+)(?:/|\\.)",
+        "previewTransforms": [
+          {
+            "pattern": "^https?://pbs\\.twimg\\.com/media/([^?]+)\\?format=([a-zA-Z0-9]+).*$",
+            "replacement": "https://pbs.twimg.com/media/$1.$2:orig"
+          },
+          {
+            "pattern": "^https?://pbs\\.twimg\\.com/media/([^?]+)\\.([a-zA-Z0-9]+)(?:\\?.*)?$",
+            "replacement": "https://pbs.twimg.com/media/$1.$2:orig"
+          }
+        ]
+      },
+      "download": {
+        "parallelism": 1,
+        "prefixOrderInFolder": false,
+        "interDownloadDelayMs": 700
+      },
+      "ui": {
+        "mode": "inline",
+        "buttonLabel": "Download",
+        "buttonTooltip": "Download tweet media",
+        "placement": {
+          "engine": "tweet_action_bar",
+          "actionGroupSelector": "div[role=\"group\"]",
+          "referenceButtonSelector": "button[data-testid=\"reply\"], button[data-testid=\"retweet\"], button[data-testid=\"like\"], button[data-testid=\"unlike\"], button[data-testid=\"bookmark\"], button[aria-haspopup=\"menu\"]:not([data-testid])",
+          "documentFallback": {
+            "whenPathPattern": "^/[^/]+/status/\\d+/(?:photo|video)/\\d+/?$",
+            "rootSelector": "div[aria-modal=\"true\"][role=\"dialog\"]",
+            "actionGroupSelector": "[role=\"group\"][aria-label]:has(a[href*=\"/analytics\"])",
+            "referenceButtonSelector": "button[data-testid=\"reply\"], button[data-testid=\"retweet\"], button[data-testid=\"like\"], button[data-testid=\"unlike\"], button[data-testid=\"bookmark\"], button[aria-haspopup=\"menu\"]:not([data-testid])",
+            "excludeWithinSelector": "article[data-testid=\"tweet\"], section[role=\"region\"] article"
+          }
+        },
+        "buttonStyle": {
+          "borderColor": "#5865f2",
+          "iconColor": "#5865f2",
+          "backgroundColor": "rgba(88,101,242,.08)",
+          "hoverBackgroundColor": "rgba(88,101,242,.14)",
+          "badgeColor": "#5865f2"
+        }
+      }
+    }
+  ]
+}

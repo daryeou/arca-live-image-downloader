@@ -1,0 +1,4 @@
+interface:
+  display_name: "Arca Change Checklist"
+  short_description: "Review cross-cutting extension repository changes"
+  default_prompt: "Use $arca-change-checklist to review this change for runtime, manifest, documentation, privacy, and release impacts."

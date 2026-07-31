@@ -1,0 +1,13 @@
+dist/
+.codex_tmp/
+.vscode
+*.zip
+*.crx
+*.pem
+node_modules/
+
+# OS and IDE files
+.DS_Store
+Thumbs.db
+Desktop.ini
+.idea/

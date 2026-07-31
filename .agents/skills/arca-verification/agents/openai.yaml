@@ -1,0 +1,4 @@
+interface:
+  display_name: "Arca Verification"
+  short_description: "Verify extension behavior and release safety"
+  default_prompt: "Use $arca-verification to verify this extension change and its public release artifacts."

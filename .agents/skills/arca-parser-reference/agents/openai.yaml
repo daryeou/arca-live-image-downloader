@@ -1,0 +1,4 @@
+interface:
+  display_name: "Arca Parser Reference"
+  short_description: "Trace Arca and X media download behavior"
+  default_prompt: "Use $arca-parser-reference to trace this media extraction or download behavior through the extension."
