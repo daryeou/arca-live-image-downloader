@@ -2,6 +2,12 @@
 
 아카라이브와 X(Twitter)에서 이미지, GIF, 비디오를 확인하고 선택해서 저장할 수 있는 Chrome 확장 프로그램입니다. 별도의 빌드 과정 없이 `src/`를 Chrome에 직접 로드할 수 있습니다.
 
+<p align="center">
+  <img src="img/Arca_Image_Downloader_Promo_1280x800.png" alt="Arca Image Downloader 소개 이미지" width="960">
+</p>
+
+> **바로 설치:** [Chrome 웹 스토어에서 Arca Downloader 설치하기](https://chromewebstore.google.com/detail/arca-downloader-x-%ED%8A%B8%EC%9C%84%ED%84%B0-%EC%9D%B4%EB%AF%B8%EC%A7%80/boeehnfmkbjiekeconbmobbdgeidgmmj?hl=ko)
+
 ## 주요 기능
 
 - 게시글이나 트윗에 포함된 미디어 자동 탐색
@@ -13,6 +19,12 @@
 - 사이트별 폴더 생성 옵션
 - 아카라이브 이모티콘 자동 제외
 - X/Twitter 트윗 액션 바와 미디어 뷰어의 인라인 다운로드 버튼
+
+## 사용 화면
+
+| 여러 미디어 선택 및 일괄 다운로드 | 다운로드 중 선택 항목 추가 |
+| :---: | :---: |
+| ![여러 미디어를 선택한 다운로드 화면](img/chrome_M8sPlc4dD6.jpg) | ![다운로드 중 선택 항목을 추가하는 화면](img/chrome_1E3edxyKqh.jpg) |
 
 ## 지원 사이트
 
@@ -72,6 +84,7 @@
 
 ```text
 src/                 Chrome에 로드하고 배포 ZIP에 포함하는 런타임
+img/                 README에 사용하는 소개 및 동작 화면
 tools/               정적 검사, 합성 테스트, 패키징 도구
 docs/                아키텍처, 사이트 설정, 배포 문서
 .agents/skills/      프로젝트 작업용 Codex 스킬
