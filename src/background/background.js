@@ -679,19 +679,18 @@ async function persistState() {
   await chrome.storage.session.set({ [STORAGE_KEY]: cloneState() });
 }
 
-async function broadcastState() {
-  const message = { action: 'progress', state: cloneState() };
-  const tabs = await chrome.tabs.query({ url: CONTENT_TAB_URLS });
-
-  await Promise.allSettled(
-    tabs.map((tab) => {
-      if (!Number.isInteger(tab.id)) {
-        return Promise.resolve();
+function broadcastToTabs(url, message) {
+  void chrome.tabs.query({ url }).then((tabs) => {
+    tabs.forEach((tab) => {
+      if (Number.isInteger(tab.id)) {
+        void chrome.tabs.sendMessage(tab.id, message).catch(() => {});
       }
+    });
+  }).catch(() => {});
+}
 
-      return chrome.tabs.sendMessage(tab.id, message);
-    })
-  );
+function broadcastState() {
+  broadcastToTabs(CONTENT_TAB_URLS, { action: 'progress', state: cloneState() });
 }
 
 function getFilename(item) {
@@ -866,18 +865,11 @@ async function setFailureHistory(siteId, history) {
 async function broadcastFailureHistory(siteId = '') {
   const normalizedSiteId = normalizeSiteStorageId(siteId);
   const history = await getFailureHistory(normalizedSiteId);
-  const message = { action: 'failureHistory', siteId: normalizedSiteId, history };
-  const tabs = await chrome.tabs.query({ url: getSiteTabUrlPatterns(normalizedSiteId) });
-
-  await Promise.allSettled(
-    tabs.map((tab) => {
-      if (!Number.isInteger(tab.id)) {
-        return Promise.resolve();
-      }
-
-      return chrome.tabs.sendMessage(tab.id, message);
-    })
-  );
+  broadcastToTabs(getSiteTabUrlPatterns(normalizedSiteId), {
+    action: 'failureHistory',
+    siteId: normalizedSiteId,
+    history
+  });
 }
 
 async function recordFailureHistoryItem(item, reason = '') {

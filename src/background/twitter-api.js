@@ -1,6 +1,7 @@
 (() => {
   const Shared = globalThis.ArcaDLShared;
   const TWITTER_TOKEN_CACHE_MS = 10 * 60 * 1000;
+  const TWITTER_REQUEST_TIMEOUT_MS = 10000;
   const TWITTER_DEFAULT_GRAPHQL_OPERATION_ID = 'zy39CwTyYhU-_0LP7dljjg';
   const TWITTER_MAIN_JS_URL_PATTERN = /https:\/\/abs\.twimg\.com\/responsive-web\/client-web(?:-legacy)?\/main\.[^"' ]+\.js/g;
   const TWITTER_TWEET_RESULT_OPERATION_PATTERN = /queryId:"([^"]+)",operationName:"TweetResultByRestId"/;
@@ -91,8 +92,18 @@
     return mainJsUrl;
   }
 
+  async function fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TWITTER_REQUEST_TIMEOUT_MS);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
+  }
+
   async function fetchText(url, options = {}) {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       cache: 'no-store',
       credentials: 'omit',
       ...options
@@ -106,7 +117,7 @@
   }
 
   async function fetchJson(url, options = {}) {
-    const response = await fetch(url, {
+    const response = await fetchWithTimeout(url, {
       cache: 'no-store',
       credentials: 'omit',
       ...options
@@ -249,7 +260,7 @@
     const bearerToken = tokenCache.bearerToken;
     const guestToken = await getGuestToken(normalizedOptions, true);
     const detailsUrl = formatDetailsUrl(tweetId);
-    const response = await fetch(detailsUrl, {
+    const response = await fetchWithTimeout(detailsUrl, {
       cache: 'no-store',
       credentials: 'omit',
       headers: {

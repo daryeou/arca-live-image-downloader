@@ -9,7 +9,10 @@
   const PANEL_POLL_MS = 500;
   const WATCH_DEBOUNCE_MS = 120;
   const WATCH_TIMEOUT_MS = 10000;
+  const RUNTIME_MESSAGE_TIMEOUT_MS = 10000;
   const LOCAL_URL_TTL_MS = 30000;
+  const LOCAL_DOWNLOAD_ATTEMPT_TIMEOUT_MS = 10000;
+  const LOCAL_DOWNLOAD_MAX_ATTEMPTS = 3;
   const RECOVERY_POLL_MS = 200;
   const RECOVERY_TIMEOUT_MS = 6000;
   const SITE_PREFERENCES_KEY = 'sitePreferences';
@@ -45,7 +48,8 @@
     openPage: '\uC5F4\uAE30',
     recoveryHelp: '\uB2E4\uC6B4\uB85C\uB4DC \uC624\uB958\uB85C \uC77C\uC2DC\uC911\uB2E8\uB418\uC5C8\uC2B5\uB2C8\uB2E4. \uC6D0\uBB38 \uD398\uC774\uC9C0\uB97C \uC5F4\uBA74 \uB2E4\uC2DC \uC9C4\uD589\uB429\uB2C8\uB2E4.',
     recoveryToast: '\uB2E4\uC6B4\uB85C\uB4DC \uC624\uB958\uAC00 \uBC1C\uC0DD\uD588\uC2B5\uB2C8\uB2E4. \uC6D0\uBB38 \uD398\uC774\uC9C0\uB97C \uC5F4\uBA74 \uB2E4\uC2DC \uC9C4\uD589\uB429\uB2C8\uB2E4.',
-    recoveryResumed: '\uD398\uC774\uC9C0 \uD655\uC778 \uD6C4 \uB2E4\uC6B4\uB85C\uB4DC\uB97C \uB2E4\uC2DC \uC2DC\uC791\uD588\uC2B5\uB2C8\uB2E4.'
+    recoveryResumed: '\uD398\uC774\uC9C0 \uD655\uC778 \uD6C4 \uB2E4\uC6B4\uB85C\uB4DC\uB97C \uB2E4\uC2DC \uC2DC\uC791\uD588\uC2B5\uB2C8\uB2E4.',
+    localDownloadFailed: '\uBE44\uB514\uC624 \uC815\uBCF4\uB97C \uBD88\uB7EC\uC624\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4. \uC7A0\uC2DC \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.'
   };
   const OVERLAY_POSITIONS = ['top-right', 'top-left', 'bottom-right', 'bottom-left'];
   const app = {
@@ -115,6 +119,26 @@
   };
 
   function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+  function sendRuntimeMessage(message) {
+    return new Promise((resolve) => {
+      let settled = false;
+      const finish = (response = null) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        resolve(response);
+      };
+      const timeoutId = setTimeout(() => finish(), RUNTIME_MESSAGE_TIMEOUT_MS);
+
+      try {
+        chrome.runtime.sendMessage(message, (response) => {
+          finish(chrome.runtime.lastError ? null : response || null);
+        });
+      } catch {
+        finish();
+      }
+    });
+  }
   function bindCurrentTabLink(link) {
     if (!link) return;
     link.addEventListener('click', (event) => {
@@ -534,28 +558,21 @@
     return '글 정보를 불러오지 못했습니다';
   }
 
-  function requestState() {
-    return new Promise((resolve) => chrome.runtime.sendMessage({ action: 'getState' }, (response) => resolve(response?.state || null)));
+  async function requestState() {
+    const response = await sendRuntimeMessage({ action: 'getState' });
+    return response?.state || null;
   }
   function resumePausedBatchFromPage(pageUrl, items) {
-    return new Promise((resolve) => chrome.runtime.sendMessage(
-      { action: 'resumePausedBatchFromPage', pageUrl, items },
-      (response) => resolve(response || null)
-    ));
+    return sendRuntimeMessage({ action: 'resumePausedBatchFromPage', pageUrl, items });
   }
-  function requestFailureHistory() {
-    return new Promise((resolve) => chrome.runtime.sendMessage(
-      { action: 'getFailureHistory', siteId: getSiteId() },
-      (response) => resolve(Array.isArray(response?.history) ? response.history : [])
-    ));
+  async function requestFailureHistory() {
+    const response = await sendRuntimeMessage({ action: 'getFailureHistory', siteId: getSiteId() });
+    return Array.isArray(response?.history) ? response.history : [];
   }
   function clearFailureHistory() {
-    return new Promise((resolve) => chrome.runtime.sendMessage(
-      { action: 'clearFailureHistory', siteId: getSiteId() },
-      () => resolve()
-    ));
+    return sendRuntimeMessage({ action: 'clearFailureHistory', siteId: getSiteId() });
   }
-  function checkExisting(title, items) {
+  async function checkExisting(title, items) {
     const payload = {
       action: 'checkExisting',
       title,
@@ -568,45 +585,48 @@
       siteId: payload.siteId,
       items: items.map((item) => getDedupDebugItemSnapshot(title, item))
     });
-    return new Promise((resolve) => chrome.runtime.sendMessage(payload, (response) => {
-      const lookup = response?.existsByKey || {};
-      dedupDebugLog('checkExisting:response', {
-        title,
-        siteId: payload.siteId,
-        lookup
-      });
-      resolve(lookup);
-    }));
+    const response = await sendRuntimeMessage(payload);
+    const lookup = response?.existsByKey || {};
+    dedupDebugLog('checkExisting:response', {
+      title,
+      siteId: payload.siteId,
+      lookup
+    });
+    return lookup;
   }
-  function sendDownloads(action, downloads, title) {
-    return new Promise((resolve) => chrome.runtime.sendMessage({ action, downloads, title }, async () => {
-      const state = await requestState();
+  async function sendDownloads(action, downloads, title) {
+    await sendRuntimeMessage({ action, downloads, title });
+    const state = await requestState();
+    if (state) {
       applyBackgroundState(state);
-      resolve();
-    }));
+    }
   }
-  function removeBatchItem(order) {
+  async function removeBatchItem(order) {
     if (!Number.isInteger(order) || app.removingBatchItem) {
-      return Promise.resolve();
+      return;
     }
 
     app.removingBatchItem = true;
     render();
 
-    return new Promise((resolve) => chrome.runtime.sendMessage({ action: 'removeBatchItem', order }, async () => {
+    try {
+      await sendRuntimeMessage({ action: 'removeBatchItem', order });
       const state = await requestState();
+      if (state) {
+        applyBackgroundState(state);
+      }
+    } finally {
       app.removingBatchItem = false;
-      applyBackgroundState(state);
-      resolve();
-    }));
+      render();
+    }
   }
   function reportDownloadResult(item, title, success, error = '') {
-    return new Promise((resolve) => chrome.runtime.sendMessage({
+    return sendRuntimeMessage({
       action: 'reportDownloadResult',
       item: toDownloadRequestItem(item, title),
       success,
       error
-    }, () => resolve()));
+    });
   }
   function chromeDownload(options) {
     return new Promise((resolve) => {
@@ -1309,21 +1329,25 @@
     const match = fallback.match(/\.([a-z0-9]{1,8})$/i);
     return match ? match[1].toLowerCase() : '';
   }
+  function toLocalDownloadItem(item, title) {
+    return {
+      ...item,
+      folderTitle: title || item?.folderTitle || '',
+      pageUrl: String(item?.pageUrl || location.href || ''),
+      pageTitle: title || item?.pageTitle || item?.folderTitle || '',
+      createFolder: getCreateFolderValue(item)
+    };
+  }
   async function resolvePreparedDownloadItem(item, title) {
     if (item.delivery === 'local' && (item.type === 'video' || item.type === 'gif') && item.statusPath) {
-      return TwitterResolver.resolve(item, title, {
+      const resolvedItem = await TwitterResolver.resolve(item, title, {
         createFolder: getCreateFolderValue(item),
         downloadConfig: getSiteDownloadConfig()
       });
+      return resolvedItem || toLocalDownloadItem(item, title);
     }
     if (item.delivery === 'local') {
-      return {
-        ...item,
-        folderTitle: title || item?.folderTitle || '',
-        pageUrl: String(item?.pageUrl || location.href || ''),
-        pageTitle: title || item?.pageTitle || item?.folderTitle || '',
-        createFolder: getCreateFolderValue(item)
-      };
+      return toLocalDownloadItem(item, title);
     }
     return toDownloadRequestItem(item, title);
   }
@@ -1346,8 +1370,10 @@
   async function tryFetchBlobVideo(item) {
     const blobUrl = String(item.blobUrl || item.mediaElement?.currentSrc || '').trim();
     if (!blobUrl.startsWith('blob:')) return false;
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), LOCAL_DOWNLOAD_ATTEMPT_TIMEOUT_MS);
     try {
-      const response = await fetch(blobUrl);
+      const response = await fetch(blobUrl, { signal: controller.signal });
       if (!response.ok) return false;
       const blob = await response.blob();
       if (!(blob.size > 0)) return false;
@@ -1355,23 +1381,27 @@
       return await saveBlobDownload(blob, filename);
     } catch {
       return false;
+    } finally {
+      clearTimeout(timeoutId);
     }
   }
   async function downloadLocalItem(item, title) {
     app.pageTitle = title || getPageTitle();
-    let attempt = 0;
-
-    while (true) {
+    for (let attempt = 0; attempt < LOCAL_DOWNLOAD_MAX_ATTEMPTS; attempt += 1) {
       const success = await tryFetchBlobVideo(item);
-      await reportDownloadResult(item, app.pageTitle, success, success ? '' : 'local-download-failed');
       if (success) {
+        await reportDownloadResult(item, app.pageTitle, true);
         return true;
       }
 
-      const waitMs = Math.min(60 * 1000, 1000 * (2 ** attempt));
-      attempt += 1;
-      await sleep(waitMs);
+      if (attempt + 1 < LOCAL_DOWNLOAD_MAX_ATTEMPTS) {
+        await sleep(1000 * (2 ** attempt));
+      }
     }
+
+    await reportDownloadResult(item, app.pageTitle, false, 'local-download-failed');
+    showToast(TEXT.localDownloadFailed);
+    return false;
   }
   async function startInlineDownload(targetId) {
     let target = app.inlineTargets.get(targetId);

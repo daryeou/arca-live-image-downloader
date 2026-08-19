@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "Arca Downloader - X 트위터 이미지 및 동영상 다운로드",
-  "version": "2.3.0",
+  "version": "2.3.1",
   "description": "아카라이브와 X(Twitter)에서 이미지, GIF, 비디오를 확인하고 다운로드하는 확장 프로그램",
   "permissions": [
     "downloads",

@@ -1,17 +1,37 @@
 (() => {
   const Shared = globalThis.ArcaDLShared;
+  const TWITTER_REQUEST_TIMEOUT_MS = 10000;
   let cachedMainJsUrl = '';
 
   function sendMessage(message) {
     return new Promise((resolve) => {
-      chrome.runtime.sendMessage(message, (response) => {
-        if (chrome.runtime.lastError) {
-          resolve(null);
-          return;
-        }
-        resolve(response || null);
-      });
+      let settled = false;
+      const finish = (value) => {
+        if (settled) return;
+        settled = true;
+        clearTimeout(timeoutId);
+        resolve(value);
+      };
+      const timeoutId = setTimeout(() => finish(null), TWITTER_REQUEST_TIMEOUT_MS);
+
+      try {
+        chrome.runtime.sendMessage(message, (response) => {
+          finish(chrome.runtime.lastError ? null : response || null);
+        });
+      } catch {
+        finish(null);
+      }
     });
+  }
+
+  async function fetchWithTimeout(url, options = {}) {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), TWITTER_REQUEST_TIMEOUT_MS);
+    try {
+      return await fetch(url, { ...options, signal: controller.signal });
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   function getCookieValue(name) {
@@ -141,7 +161,7 @@
       }
 
       const requestUrl = String(request.url || '').replace(/^https:\/\/x\.com/i, location.origin);
-      const response = await fetch(requestUrl, {
+      const response = await fetchWithTimeout(requestUrl, {
         credentials: 'include',
         headers
       });
